@@ -478,9 +478,11 @@ export const CATEGORY_FISCAL_TREATMENT = {
   "Leningen": "financiering", "Lease (financieel)": "financiering",
   // Nooit een kostenpost, ongeacht tx.type: persoonlijke belastingafdrachten (MRB is de
   // uitzondering, dat is een genuine zakelijke autokostenpost)
-  "Belastingen: IB": "geen", "Belastingen: IH": "geen", "Belastingen: LH": "geen", "Belastingen: OB": "geen",
+  // nieuw-V10R2 — Boska 23-11: afgedragen loonheffing voor personeel hoort bij de loonkosten (het nettoloon telt al als kosten).
+  "Belastingen: LH": "kosten", "Belastingen: Naheffingen LH voorgaande jaren": "kosten",
+  "Belastingen: IB": "geen", "Belastingen: IH": "geen", "Belastingen: OB": "geen",
   "Belastingen: ZVW": "geen", "Belastingen: overig": "geen",
-  "Belastingen: Naheffingen OB voorgaande jaren": "geen", "Belastingen: Naheffingen LH voorgaande jaren": "geen",
+  "Belastingen: Naheffingen OB voorgaande jaren": "geen",
   "Belastingen: Naheffingen IB voorgaande jaren": "geen",
   // Transfers/boekwinst/nog-te-beoordelen — geen gewone omzet of kostenpost
   "Inkomsten/betalingen niet dit jaar": "geen", "Verkoop activa": "geen", "Overig": "geen", "Borg (waarborgsom)": "geen",

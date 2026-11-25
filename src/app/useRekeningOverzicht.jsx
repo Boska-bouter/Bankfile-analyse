@@ -100,7 +100,7 @@ export function useRekeningOverzicht(invoer) {
     heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, ibStatus, incompleteActivaCount, incompleteLeasesCount,
     incompleteLoansCount, korRegeling, kwartaalStatus, periodeQuarterOverrides, priveRekeningGeladen,
     rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, voorbelastingExcluded, vpbStatus,
-    years, zelfstandigenaftrekStatus, zvwStatus, priveOverzicht,
+    years, zelfstandigenaftrekStatus, zvwStatus, priveOverzicht, balansOpen: invoer.balansOpen,
   });
   return { aansluitControleInfo, businessAdvies, checklistData, incompleteActivaCount, incompleteLeasesCount, incompleteLoansCount, priveRekeningGeladen, rekeningTypeTekst, volledigeJaren, yearlyProgress, zakelijkRekeningGeladen };
 }

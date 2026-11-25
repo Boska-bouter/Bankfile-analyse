@@ -17,7 +17,7 @@ function boekwaardeEindVan(activum, j) {
 }
 const beginEind = (activum, year) => ({ begin: boekwaardeEindVan(activum, year - 1), eind: boekwaardeEindVan(activum, year) });
 
-export function balansPostenVoorJaar({ classified, year, accountTypeByFile, leaseSummary, leaseDetails, activaDetails, autoActivaDetails, autoWizardStatus }) {
+export function balansPostenVoorJaar({ classified, year, accountTypeByFile, leaseSummary, leaseDetails, activaDetails, autoActivaDetails, autoWizardStatus, beginsaldo = null }) {
   let leaseElders = 0;
   const auto = { begin: 0, eind: 0 }, overig = { begin: 0, eind: 0 }, leaseschuld = { begin: 0, eind: 0 };
   const autoItems = [];
@@ -59,6 +59,15 @@ export function balansPostenVoorJaar({ classified, year, accountTypeByFile, leas
     };
     // Termijnen die als "elders betaald" zijn aangevuld (geen banktransactie): betaald vanaf privé of een andere rekening.
     leaseElders += am.rows.filter((r) => r.tx.synthetic && r.tx.date.getFullYear() === year).reduce((a, r) => a + Math.abs(r.tx.amount), 0);
+    // nieuw-V9R9 — Balanscheck-agent (Meijer 2020): een aanbetaling die niet vanaf de zakelijke rekening is betaald, is een
+    // privéstorting in het startjaar (de auto staat voor de hele koopprijs op de balans, de leaseschuld voor het restant).
+    for (const sg of segs) {
+      const aan = Number(sg.aanbetaling) || 0, start = new Date(sg.startdatum);
+      if (aan < 1 || start.getFullYear() !== year) continue;
+      const viaBank = (classified || []).some((tx) => !tx.isMirror && tx.date && (accountTypeByFile?.[tx.source] || tx.accountType) === "Zakelijk"
+        && Math.abs(tx.amount + aan) < 1 && Math.abs(new Date(tx.date) - start) <= 120 * 86400000);
+      if (!viaBank) leaseElders += aan;
+    }
     leaseschuld.begin += saldoVoor(new Date(year, 0, 1));
     leaseschuld.eind += saldoVoor(new Date(year + 1, 0, 1));
   }
@@ -72,13 +81,55 @@ export function balansPostenVoorJaar({ classified, year, accountTypeByFile, leas
     if (activum) tel(auto, beginEind(activum, year), activum);
   }
   // Zakelijke spaarrekening die niet als bestand is geladen: saldo = som van de overboekingen ernaartoe.
+  // nieuw-V9R9 — Boska 23-11: ook "Interne overboeking" vanaf de zakelijke rekening (naar een andere, niet geladen
+  // zakelijke rekening, bijv. de spaarrekening uit de wizard) hoort op de balans; anders bleef het als verschil hangen.
+  // Per rekening: saldo op 1-1 van het eerste jaar = ingevuld (beginsaldo["rek:IBAN"]) of berekend als het minimum
+  // waarbij het saldo nooit negatief wordt (er stond al geld op als er meer af ging dan erop werd gezet).
+  const rekeningen = perTegenrekening(classified, accountTypeByFile, (tx) => tx.category === "Interne overboeking: zakelijk sparen" || tx.category === "Interne overboeking");
   const sparen = { begin: 0, eind: 0 };
-  for (const tx of classified || []) {
-    if (tx.isMirror || tx.category !== "Interne overboeking: zakelijk sparen" || !tx.date) continue;
-    if ((accountTypeByFile?.[tx.source] || tx.accountType) !== "Zakelijk") continue;
-    const d = new Date(tx.date);
-    if (d < new Date(year, 0, 1)) sparen.begin -= tx.amount;
-    if (d < new Date(year + 1, 0, 1)) sparen.eind -= tx.amount;
+  const sparenRek = [];
+  for (const r of rekeningen) {
+    const ing = beginsaldo?.[`rek:${r.iban}`];
+    const ingevuld = ing && Number.isFinite(Number(ing.bedrag)) ? Number(ing.bedrag) : null;
+    const start = ingevuld ?? r.minStart;
+    const begin = start + r.tot(new Date(year, 0, 1)), eind = start + r.tot(new Date(year + 1, 0, 1));
+    sparen.begin += begin; sparen.eind += eind;
+    sparenRek.push({ iban: r.iban, naam: r.naam, weergave: r.weergave, spaar: r.spaar, eersteJaar: r.eersteJaar, start, berekend: ingevuld == null, begin, eind });
   }
-  return { auto, overig, overigMut, leaseschuld, autoItems, sparen, leaseElders };
+  // nieuw-V9R9 — Boska 23-11 ("borg moet gewoon mee op de balans"): betaalde borg = vordering; borg die terugkomt zonder
+  // dat de betaling in de bankbestanden staat, is al eerder betaald en stond op 1-1 van het eerste jaar al als vordering.
+  const borgRek = perTegenrekening(classified, accountTypeByFile, (tx) => tx.category === "Borg (waarborgsom)", true);
+  const borg = { begin: 0, eind: 0, berekendBegin: 0 };
+  for (const r of borgRek) {
+    borg.begin += r.minStart + r.tot(new Date(year, 0, 1)); borg.eind += r.minStart + r.tot(new Date(year + 1, 0, 1));
+    borg.berekendBegin += r.minStart;
+  }
+  return { auto, overig, overigMut, leaseschuld, autoItems, sparen, sparenRek, borg, leaseElders };
+}
+
+// nieuw-V9R9 — boekingen op de zakelijke rekening per tegenrekening (of alles samen): saldo aan "de andere kant"
+// = −som van de boekingen; minStart = het kleinste beginsaldo waarbij dat saldo nooit onder nul komt.
+function perTegenrekening(classified, accountTypeByFile, filter, samen = false) {
+  const m = new Map();
+  const norm = (x) => String(x || "").replace(/\s+/g, "").toUpperCase();
+  const isZak = (tx) => (accountTypeByFile?.[tx.source] || tx.accountType) === "Zakelijk";
+  // Overboekingen tussen twee GELADEN zakelijke rekeningen staan al in het banksaldo (beide kanten): niet nog eens tellen.
+  const geladen = new Set((classified || []).filter((tx) => isZak(tx) && tx.ownAccount).map((tx) => norm(tx.ownAccount)));
+  for (const tx of classified || []) {
+    if (tx.isMirror || !tx.date || !filter(tx)) continue;
+    if (!isZak(tx)) continue;
+    if (!samen && tx.counterpartyIban && geladen.has(norm(tx.counterpartyIban))) continue;
+    const iban = samen ? "" : String(tx.counterpartyIban || "").replace(/\s+/g, "").toUpperCase();
+    if (!m.has(iban)) m.set(iban, { iban, naam: tx.counterparty || "", weergave: tx.tegenrekeningUitOmschrijving ? String(tx.counterpartyIban).trim() : null, txs: [] });
+    m.get(iban).txs.push(tx);
+  }
+  return [...m.values()].map((r) => {
+    const txs = r.txs.sort((a, b) => (new Date(a.date) - new Date(b.date)) || (a.amount - b.amount)); // zelfde dag: eerst wat erheen gaat
+    let saldo = 0, laagste = 0;
+    for (const tx of txs) { saldo -= tx.amount; laagste = Math.min(laagste, saldo); }
+    return {
+      iban: r.iban, naam: r.naam, weergave: r.weergave, spaar: txs.every((tx) => tx.category === "Interne overboeking: zakelijk sparen"), eersteJaar: new Date(txs[0].date).getFullYear(), minStart: -laagste,
+      tot: (d) => -txs.filter((tx) => new Date(tx.date) < d).reduce((a, tx) => a + tx.amount, 0),
+    };
+  });
 }

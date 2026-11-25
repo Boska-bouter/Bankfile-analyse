@@ -1,5 +1,7 @@
+import { markeerOmzetViaRekening } from "./classification/omzetViaRekening.js";
 import { kmBekend, kmMaxVoorJaar } from "./tax/kmVergoeding.js";
 import { useEffect, useMemo, useRef, useState, startTransition } from "react";
+import { balansSleutel, haalMeldingen } from "./reports/aangiftevoorstel.js";
 import PriveMakenModal from "./components/prive/PriveMakenModal.jsx";
 import ZakelijkMakenModal from "./components/prive/ZakelijkMakenModal.jsx";
 import { AlertCircle, Loader2, ListTree, MessageSquare } from "lucide-react";
@@ -225,6 +227,7 @@ export default function App() {
   // (originele regels naast elkaar, incl. IBAN/volledige omschrijving/saldo per bestand).
   const [duplicateDetailGroup, setDuplicateDetailGroup] = useState(null);
   const [openingBalanceCorrections, setOpeningBalanceCorrections] = useState({}); // { fileName: number }
+  const [voorlopigeAanslag, setVoorlopigeAanslag] = useState({}); // nieuw-V10R0 — { jaar: { ib, zvw, betaald } }
   const [beginsaldoZakelijk, setBeginsaldoZakelijk] = useState({}); // nieuw-V9R0 — { rekening: { jaar, bedrag } } voor bankbestanden zonder saldo
   const [businessKeywords, setBusinessKeywords] = useState([]);
   const [businessExpenseKeywords, setBusinessExpenseKeywords] = useState([]);
@@ -551,6 +554,11 @@ export default function App() {
   // B4 — wijzigingslog (label + tijdstip van elke vastgelegde actie), B5 — optioneel wachtwoord op het dossierbestand
   const [auditLog, setAuditLog] = useState([]);
   const [bevestigdeControles, setBevestigdeControles] = useState({}); // C — { sleutel: true } voor 'klopt zo' bij aanvullende controles
+  // nieuw-V9R8 — Balanscheck (Boska 23-11): meldingen van de balans per jaar [{ k, tekst }]; "Gezien, klopt" = bevestigdeControles["balans|jaar|k"].
+  const [balansPerJaar, setBalansPerJaar] = useState({});
+  // nieuw-V10R2 — na "Ja, omzet" is de vraag over die rekening beantwoord (ook als er niets terugkwam).
+  const balansOpenVan = (jaar) => (balansPerJaar[jaar] || []).filter((m) => !bevestigdeControles?.[balansSleutel(jaar, m.k)] && !(m.k.startsWith("spaarsaldo:") && bevestigdeControles?.[`omzetrek|${m.k.split(":")[1]}`]));
+  const balansOpen = useMemo(() => Object.fromEntries(Object.keys(balansPerJaar).map((j) => [j, balansOpenVan(j).length])), [balansPerJaar, bevestigdeControles]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showLog, setShowLog] = useState(false);
   const [showZoek, setShowZoek] = useState(false);
   const [priveMakenOpen, setPriveMakenOpen] = useState(false); // beide-V13R7 — Maak er een privédossier van
@@ -588,6 +596,7 @@ export default function App() {
   const confidenceSectionRef = useRef(null);
   const personReviewSectionRef = useRef(null);
   const overigReviewSectionRef = useRef(null);
+  const balansCheckRef = useRef(null); // nieuw-V9R8 — Balanscheck in Controleren
   const quarterlyBtwSectionRef = useRef(null);
   const multiYearSectionRef = useRef(null);
   const btwSettingsSectionRef = useRef(null);
@@ -641,6 +650,7 @@ export default function App() {
   // en dan pas te scrollen (de sectie stond tot dat moment op display:none).
   const REF_TAB_ENTRIES = [
     [importControleSectionRef, "controleren"],
+    [balansCheckRef, "controleren"],
     [confidenceSectionRef, "controleren"],
     [incomeReviewSectionRef, "controleren"], // V90 — ontbrak: "Ga naar deze stap" bij Herkomst van inkomsten deed daardoor niets
     [personReviewSectionRef, "controleren"],
@@ -677,6 +687,7 @@ export default function App() {
   // moet uitgeklapt zijn, false = de kaart moet ingeklapt zijn.
   const REF_COLLAPSE_KEYS = [
     [importControleSectionRef, "importKwaliteit", true],
+    [balansCheckRef, "importKwaliteit", true],
     [confidenceSectionRef, "importKwaliteit", true],
     [incomeReviewSectionRef, "herkomstOpschonen", true],
     [personReviewSectionRef, "herkomstOpschonen", true],
@@ -832,7 +843,7 @@ export default function App() {
     weergave, eenvoudigGezien, tariefOverrides, overigInkomenBox1, priveAntwoorden, autoStatus,
     autoWizardStatus, autoActivaDetails, kmVergoedingDetails, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus,
     categoryZakelijkPercentage, openingBalanceCorrections, incomeBtwTarieven, meerdereTarievenBevestigd, verwachteAangeboden, kleinBedragInstelling,
-    beginsaldoZakelijk,
+    beginsaldoZakelijk, voorlopigeAanslag,
   };
   const dossierZetters = {
     parsedFiles: setParsedFiles, accountTypeByFile: setAccountTypeByFile, overridesByCounterparty: setOverridesByCounterparty,
@@ -857,7 +868,7 @@ export default function App() {
     huurZakelijkPercentageStatus: setHuurZakelijkPercentageStatusState, energieZakelijkPercentageStatus: setEnergieZakelijkPercentageStatusState, gemeentelijkeKostenZakelijkPercentageStatus: setGemeentelijkeKostenZakelijkPercentageStatusState,
     categoryZakelijkPercentage: setCategoryZakelijkPercentageState, openingBalanceCorrections: setOpeningBalanceCorrections, incomeBtwTarieven: setIncomeBtwTarieven,
     meerdereTarievenBevestigd: setMeerdereTarievenBevestigd, verwachteAangeboden: setVerwachteAangeboden, kleinBedragInstelling: setKleinBedragInstelling,
-    beginsaldoZakelijk: setBeginsaldoZakelijk,
+    beginsaldoZakelijk: setBeginsaldoZakelijk, voorlopigeAanslag: setVoorlopigeAanslag,
   };
 
   useAutomatischBewaren({
@@ -1040,7 +1051,12 @@ export default function App() {
   useNamenTerugsturen(classifiedBasis, namenToestemming); // nieuw-V2R1 — alleen met toestemming
   useNamenOpzoeken(classifiedBasis, categoryRules, namenAi); // nieuw-V2R2 — onbekende bedrijfsnamen opzoeken met AI
   // huishoudboekje-V6R9 — kleine onzekere boekingen tellen niet als open punt (zie classification/kleineBedragen.js).
-  const classified = useMemo(() => markeerKleineBedragen(classifiedBasis, kleinBedragInstelling), [classifiedBasis, kleinBedragInstelling]);
+  // nieuw-V10R2 — eigen rekening zonder bankbestand met omzet (Balanscheck "Ja, omzet"): overschot telt als omzet.
+  // Sleutel als tekst, zodat andere afgevinkte controles niet alles opnieuw laten berekenen. Niet bij BV (daar geen Balanscheck).
+  const omzetRekeningenSleutel = rechtsvorm === "bv" ? "" : Object.keys(bevestigdeControles || {}).filter((k) => k.startsWith("omzetrek|") && bevestigdeControles[k]).map((k) => k.slice(9)).sort().join("|");
+  const omzetRekeningen = useMemo(() => (omzetRekeningenSleutel ? omzetRekeningenSleutel.split("|") : []), [omzetRekeningenSleutel]);
+  const geladenIbansSleutel = Object.values(ownAccountByFile || {}).filter(Boolean).sort().join("|");
+  const classified = useMemo(() => markeerKleineBedragen(markeerOmzetViaRekening(classifiedBasis, omzetRekeningen, { geladen: geladenIbansSleutel.split("|"), overridesByRow }), kleinBedragInstelling), [classifiedBasis, omzetRekeningen, geladenIbansSleutel, overridesByRow, kleinBedragInstelling]);
   const kleinBedragOverzicht = useMemo(() => kleinOverzicht(classified, kleinBedragInstelling), [classified, kleinBedragInstelling]);
   const kleinBedragGroepen = useMemo(() => kleineGroepen(classified), [classified]);
   // nieuw-V1R5 — één set props voor de kaart bij Controleren en bij Instellingen (bevestigd = melding bij Controleren afgesloten)
@@ -1358,7 +1374,7 @@ export default function App() {
   }, [classified]);
   registerGiften(giftenPerJaar);
   const { autoExactIngevuld, belastingTotaalJaar, bvSignalering, categorieTotalenActiveYear, categoryZakelijkPercentageEff, confirmPeriodeAsIs, costBreakdownByQuarter, costBreakdownByYear, dashboardAangifteIndicatie, dashboardVpbBreakdown, dashboardVpbIndicatie, dgaSalarisByYear, eenvoudigLease, eigenPriveIbans, evVerloop, fiscaalVoorJaar, gedeeldeEnergieForActiveYear, gedeeldeGemeentelijkeKostenForActiveYear, gedeeldeHuurForActiveYear, heeftLeaseAutoDossierBreed, holdingSummaryCard, ibEstimate, kostenTotaalByYear, leaseGroepenEenv, movePeriodeToQuarter, ondernemersaftrekPerJaar, overigeDelen, periodeSignalenActiefJaar, priGroupForYear, priGroupShown, priGroupWeergave, priveOnlyDossier, priveOverzicht, quarterlyBtwData, rcVerloop, rekeningenVoorGroep, yearCoverage, yearlyOpenOB, yearlySummaries, yearlySummary, zakGroupForYear, zakGroupWeergave, zetEenvoudigLease, zvwEstimate } = useJaarGroepen({ accountTypeByFile, activaDetails, activaSummary, activeYear, autoActivaDetails, autoStatus, autoWizardStatus, bevestigdInBulkVenster, bevestigdeControles, btwVerlegd, categoryZakelijkPercentage, classified, eenvoudigActief, effectiveCategoryBtwRates, eigenRekeningenExtra, eigenRekeningenGeladen, energieZakelijkPercentageStatus, fixedCategories, gemeentelijkeKostenZakelijkPercentageStatus, groups, heeftHolding, holdingBoekingen, holdingBoekingenSectionRef, huurZakelijkPercentageStatus, importDiagnostics, kmVergoedingDetails, korRegeling, kwartaalStatus, leaseDetails, leaseSummary, loanDetails, loanSummary, modus, overigInkomenBox1, ownAccountByFile, periodeQuarterOverrides, priveAntwoorden, rechtsvorm, reviewedOverigKeys, reviewedPeriodeKeys, reviewedPersonKeys, setBevestigdeControles, setPeriodeQuarterOverrides, setReviewedPeriodeKeys, setShowHoldingBoekingen, snapshotBeforeAction, startersaftrekEff, tariefOverrides, voorbelastingExcluded, werkruimteStatus, years, zaLegacyJaDefault, zelfstandigenaftrekStatus, appLaat });
-  const { aansluitControleInfo, businessAdvies, checklistData, incompleteActivaCount, incompleteLeasesCount, incompleteLoansCount, priveRekeningGeladen, rekeningTypeTekst, volledigeJaren, yearlyProgress, zakelijkRekeningGeladen } = useRekeningOverzicht({ accountTypeByFile, activaDetails, activaSummary, activeYear, autoStatus, bevestigdInBulkVenster, bevestigdeControles, btwVerlegd, categoryZakelijkPercentageEff, classified, confirmedLeaseTypeKeys, effectiveCategoryBtwRates, eigenRekeningenExtra, eigenRekeningenGeladen, energieZakelijkPercentageStatus, fileContinuity, gemeentelijkeKostenZakelijkPercentageStatus, groups, heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, ibEstimate, ibStatus, korRegeling, kwartaalStatus, leaseDetails, leaseSummary, loanDetails, loanSummary, modus, parsedFiles, periodePerSoort, periodeQuarterOverrides, priGroupForYear, priveOverzicht, quarterlyBtwData, rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, voorbelastingExcluded, vpbStatus, yearlyOpenOB, yearlySummary, years, zakGroupForYear, zelfstandigenaftrekStatus, zvwEstimate, zvwStatus });
+  const { aansluitControleInfo, businessAdvies, checklistData, incompleteActivaCount, incompleteLeasesCount, incompleteLoansCount, priveRekeningGeladen, rekeningTypeTekst, volledigeJaren, yearlyProgress, zakelijkRekeningGeladen } = useRekeningOverzicht({ balansOpen, accountTypeByFile, activaDetails, activaSummary, activeYear, autoStatus, bevestigdInBulkVenster, bevestigdeControles, btwVerlegd, categoryZakelijkPercentageEff, classified, confirmedLeaseTypeKeys, effectiveCategoryBtwRates, eigenRekeningenExtra, eigenRekeningenGeladen, energieZakelijkPercentageStatus, fileContinuity, gemeentelijkeKostenZakelijkPercentageStatus, groups, heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, ibEstimate, ibStatus, korRegeling, kwartaalStatus, leaseDetails, leaseSummary, loanDetails, loanSummary, modus, parsedFiles, periodePerSoort, periodeQuarterOverrides, priGroupForYear, priveOverzicht, quarterlyBtwData, rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, voorbelastingExcluded, vpbStatus, yearlyOpenOB, yearlySummary, years, zakGroupForYear, zelfstandigenaftrekStatus, zvwEstimate, zvwStatus });
 
   // ---- Dashboard-overzicht (v217-v219) — dossierbrede + per-jaar + situationele kaarten met live
   // cijfers, elk een snelkoppeling naar de bijbehorende sectie verderop op dezelfde pagina.
@@ -1548,6 +1564,7 @@ export default function App() {
     importControleSectionRef, incomeReviewSectionRef, jumpToSection, overigReviewSectionRef, pendingDuplicateCount,
     pendingIncomeReview, pendingOverigReview, pendingPersonReview, personReviewSectionRef, setDismissedDuplicateNotice,
     setOpenConfidenceLevel, setShowOverigReview, setShowPersonReview, transactions, activeYear, setActiveYear,
+    balansOpen: rechtsvorm !== "bv" && !priveOverzicht ? balansOpen : null, balansCheckRef,
   });
 
   // v261 — telt, over alle (niet-vaste-tarief) subtype-categorieën, hoeveel er op 21%/9%/0% staan —
@@ -1649,6 +1666,17 @@ export default function App() {
     };
   };
   const controlerenCardGroups = useControlerenCardGroups({
+    balansCheck: rechtsvorm !== "bv" && !priveOverzicht ? {
+      lijst: (balansPerJaar[activeYear] || []).filter((m) => !(m.k.startsWith("spaarsaldo:") && bevestigdeControles?.[`omzetrek|${m.k.split(":")[1]}`])).map((m) => ({ ...m, bevestigd: !!bevestigdeControles?.[balansSleutel(activeYear, m.k)] })),
+      onBevestig: (k, j = activeYear) => bevestigControle(balansSleutel(j, k)),
+      onHerroep: (k, j = activeYear) => herroepControle(balansSleutel(j, k)),
+      onOmzet: (iban) => bevestigControle(`omzetrek|${iban}`),
+      omzetRekeningen, onOmzetTerug: (iban) => herroepControle(`omzetrek|${iban}`),
+      onBestandToevoegen: () => startBankbestandToevoegen(),
+      andereJaren: Object.keys(balansOpen).filter((j) => balansOpen[j] > 0 && Number(j) !== Number(activeYear)).sort(),
+      // nieuw-V10R2 — Boska 23-11 ("ik kan ze niet zien"): open punten van de andere jaren ook tonen.
+      andereLijsten: Object.fromEntries(Object.keys(balansOpen).filter((j) => balansOpen[j] > 0 && Number(j) !== Number(activeYear)).map((j) => [j, balansOpenVan(j)])),
+    } : null, balansCheckRef,
     rechtsvorm, confidenceOpenJaren: confidenceSummary?.openJaren || [], setActiveYear, overlapKoppeling: overlapKoppeling.overlap,
     PRIVE_ONLY_HUISVESTING_STANDAARD_NUL, aannamesSectionRef, aansluitControleInfo, accountTypeByFile, activaDetails,
     activaSectionRef, activaSummary, activeYear, autoStatus, autoWizardStatus,
@@ -1754,8 +1782,9 @@ export default function App() {
   });
   const {
     bouwRapportHtml, exportAangiftevoorstel, setAangiftevoorstelPreview, startBtwOverzicht, startKlantSamenvatting, startOnderbouwing,
-    rapportVensters,
+    rapportVensters, indicatieTotaal,
   } = useRapporten({
+    naarBalanscheck: (jaar) => { if (jaar) setActiveYear(Number(jaar)); jumpToSection(balansCheckRef); }, bevestigdeControles, voorlopigeAanslag,
     accountTypeByFile, activaDetails, activaSummary, activeYear, alleStappen, beginsaldoZakelijk, autoActivaDetails, autoStatus,
     autoWizardStatus, btwVerlegd, categoryZakelijkPercentageEff, classified, dossierProfiel, eenvoudigActief,
     effectiveCategoryBtwRates, eigenNamen, energieZakelijkPercentageStatus, fileContinuity,
@@ -1768,12 +1797,21 @@ export default function App() {
     tariefOverrides, voorbelastingExcluded, werkruimteStatus, yearPeriod, yearlySummaries, years, zaLegacyJaDefault,
     zelfstandigenaftrekStatus,
   });
+  // nieuw-V9R8 — Balanscheck: na elke wijziging die de balans raakt de meldingen per jaar opnieuw bepalen (na het tekenen).
+  useEffect(() => {
+    if (rechtsvorm === "bv" || priveOverzicht || !years.length || !classified.length) { setBalansPerJaar({}); return undefined; }
+    const t = setTimeout(() => {
+      try { setBalansPerJaar(haalMeldingen(bouwRapportHtml([...years].sort(), "met"))); } catch { setBalansPerJaar({}); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [classified, years, leaseDetails, loanDetails, activaDetails, autoActivaDetails, autoWizardStatus, reviewedOverigKeys, reviewedPersonKeys, kwartaalStatus, beginsaldoZakelijk, accountTypeByFile, rechtsvorm, priveOverzicht, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, korRegeling, periodeQuarterOverrides, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, kmVergoedingDetails, leaseSummary, loanSummary]); // eslint-disable-line react-hooks/exhaustive-deps
   // nieuw-V7R9 — fiscale regressietest (tests/regressie/fiscaal.mjs): de jaartotalen van het rapport over alle jaren (alleen DEV).
   if (import.meta.env.DEV && typeof window !== "undefined" && window.__bt) {
     window.__bt.fiscaal = () => { bouwRapportHtml([...years].sort()); return { rechtsvorm, prive: !!priveOverzicht, jaren: rechtsvorm === "bv" ? laatsteJaarTotalenBv() : laatsteJaarTotalen() }; };
     window.__bt.km = () => ({ autoStatus, kmVergoedingDetails }); // nieuw-V8R1 — controle km-vergoeding
     window.__bt.rapport = (jaren, balans) => bouwRapportHtml(jaren, balans); // nieuw-V8R3 — rapport-HTML voor controle
     window.__bt.aangiftePicker = () => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); };
+    window.__bt.voorlopig = (v) => setVoorlopigeAanslag(v); window.__bt.meerjaren = () => setShowMultiYearModal(true); // nieuw-V10R1 — mockups
     window.__bt.lease = () => leaseSummary.map((l) => ({ key: l.key, category: l.category, tx: (l.transactions || []).map((t) => [new Date(t.date).toISOString().slice(0, 10), t.amount]) })); // nieuw-V8R4 — controle leaseschuld
   }
   const volgendeStap = alleStappen.find((i) => i.onClick && !overgeslagenStappen.includes(i.key)) || null;
@@ -1790,7 +1828,7 @@ export default function App() {
   // (bijv. Overig opruimen → 0 open en de rest van "Herkomst & opschonen" ook klaar). Alleen bij de overgang
   // "had open punten → geen open punten meer"; bij het laden van een dossier of een al-groene kaart gebeurt niets.
   const STAP_GROEPEN = {
-    importKwaliteit: ["importControle", "confidence"],
+    importKwaliteit: ["importControle", "confidence", "balanscheck"],
     herkomstOpschonen: ["incomeReview", "personReview", "overigReview", "duplicates"],
     bedrijfsmiddelen: ["loans", "leases", "activa"],
     aannamesPercentages: ["aannames"],
@@ -2064,7 +2102,7 @@ export default function App() {
     setKmVergoedingDetailsState, setKorRegeling, setKwartaalStatus, setLastExportAt, setLeaseDetails,
     setLeaseDetailsModalKey, setLeaseMergedInto, setLoadedProjectFileName, setLoanDetails, setLoanDetailsModalKey,
     setManualWizardOpen, setMaxStappen, setMeerdereTarievenBevestigd, setModusKeuzeOpen, setModusNaLaden,
-    setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setBeginsaldoZakelijk, setOvergeslagenStappen, setOverigInkomenBox1State,
+    setOpdrachtgeversGevraagd, setOpeningBalanceCorrections, setBeginsaldoZakelijk, setVoorlopigeAanslag, setOvergeslagenStappen, setOverigInkomenBox1State,
     setOverridesByCounterparty, setOverridesByRow, setParsedFiles, setPeriodeQuarterOverrides, setPriveAntwoorden,
     setRechtsvorm, setReviewFileModal, setReviewedIncomeKeys, setReviewedOverigKeys, setReviewedPeriodeKeys,
     setReviewedPersonKeys, setSaveState, setSelectedAangifteYears, setShowAangifteYearPicker, setSoortDossier,
@@ -2221,7 +2259,8 @@ export default function App() {
   // beide-V1R3 — in een privédossier bestaan de zakelijke vragen niet; die tellen dan nooit als overgeslagen.
   const zakelijkeVragen = modus.onderdelen.omzet !== false;
   const overgeslagenInEenvoudig = [
-    (eigenRekeningenExtra === null || (zakelijkeVragen && zakelijkeSpaarRekening === null)) && "andere eigen rekeningen",
+    // nieuw-V10R9 — de vraag "spaarrekening gekoppeld?" bestaat niet meer; spaarrekeningen staan in de lijst eigen rekeningen.
+    eigenRekeningenExtra === null && "andere eigen rekeningen",
     zakelijkeVragen && opdrachtgeversGevraagd === null && "klanten en leveranciers",
     // nieuw-V6R9 — de machinevraag geldt alleen als overgeslagen als de volledige wizard nooit is doorlopen
     // (dan is ook de klantenvraag nog open) en er geen bedrijfsmiddelen zijn. Oudere, in Uitgebreid gemaakte
@@ -2378,6 +2417,8 @@ export default function App() {
           zvwStatus={zvwStatus}
           setZvwGedaan={setZvwGedaan}
           onOpenHelp={setHelpPopupChapter}
+          voorlopigeAanslag={voorlopigeAanslag}
+          indicatieTotaal={indicatieTotaal}
         />
       )}
 
@@ -2661,6 +2702,7 @@ export default function App() {
                 onBerekening={() => { setShowAangifteMeerdereJaren(false); setShowAangifteYearPicker(true); }}
                 onVragen={() => setManualWizardOpen(true)}
                 onActie={handleDetailsJump} onSamenvatting={startKlantSamenvatting}
+                voorlopigeAanslag={voorlopigeAanslag}
                 ibGedaan={!!ibStatus[activeYear]?.gedaan} onIbGedaan={(v) => setIbGedaan(activeYear, v)}
               />
             )}
@@ -3186,6 +3228,10 @@ export default function App() {
                     toonBalansKeuze={rechtsvorm !== "bv" && !priveOverzicht}
                     rekeningenZonderSaldo={rekeningenZonderSaldo(classified, accountTypeByFile)}
                     beginsaldo={beginsaldoZakelijk}
+                    voorlopigeAanslag={rechtsvorm !== "bv" ? voorlopigeAanslag : {}}
+                    setVoorlopigeAanslag={rechtsvorm !== "bv" ? setVoorlopigeAanslag : null}
+                    zonderZvw={!!priveOverzicht}
+                    voorlopigBank={Object.fromEntries((years || []).map((j) => [j, -classified.filter((tx) => !tx.isMirror && tx.date && new Date(tx.date).getFullYear() === j && (tx.category === "Belastingen: IB" || tx.category === "Belastingen: ZVW")).reduce((a, tx) => a + tx.amount, 0)]))}
                     setBeginsaldo={setBeginsaldoZakelijk}
                   />
                 )}

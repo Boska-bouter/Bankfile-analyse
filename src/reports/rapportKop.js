@@ -36,7 +36,7 @@ export function rapportKopHtml(jaren = null, { vandaag = new Date(), bron = _bro
     return st.includes("benadering") ? `${j} benaderd` : st.includes("voorlopig") ? `${j} voorlopig` : null;
   }).filter(Boolean);
 
-  const regel = (label, inhoud) => `<div style="margin:1px 0"><span style="color:#64748b">${label}:</span> ${inhoud}</div>`;
+  const regel = (label, inhoud) => `<div style="margin:1px 0"><span style="color:#334155">${label}:</span> ${inhoud}</div>`;
   const dekkingTekst = dekking.length
     ? dekking.map((d) => `${esc(d.label)}${d.type ? ` (${esc(d.type)})` : ""} ${datum(d.van)} t/m ${datum(d.tot)}`).join(" · ")
     : "geen bankgegevens in deze periode";
@@ -47,7 +47,7 @@ export function rapportKopHtml(jaren = null, { vandaag = new Date(), bron = _bro
   // huishoudboekje-V1R5 — bovenrand in de kleur van de soort dossier (zakelijk zeegroen, privé blauw, Huishoudboekje pruim).
   const soortKleur = /^Privé/.test(bron.soort || "") ? "#24569f" : /^Huishoudboekje/.test(bron.soort || "") ? "#8a3b7c" : "#0f766e";
   return `<div class="rapportkop" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.45;color:#334155;border:1px solid #cbd5e1;border-top:4px solid ${soortKleur};border-radius:6px;padding:8px 12px;margin:0 0 16px;background:#f8fafc">
-<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e2e8f0;padding-bottom:5px;margin-bottom:5px"><span style="display:flex;align-items:center;gap:6px">${LOGO}<strong style="font-size:13.5px;color:#1E2A4A">Bankafschriften<span style="color:#0f766e">Tool</span></strong><span style="font-size:9.5px;color:#94a3b8;margin-left:2px">© Paul Gerits</span></span><span style="flex:1"></span>${status}</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e2e8f0;padding-bottom:5px;margin-bottom:5px"><span style="display:flex;align-items:center;gap:6px">${LOGO}<strong style="font-size:13.5px;color:#1E2A4A">Bankafschriften<span style="color:#0f766e">Tool</span></strong><span style="font-size:9.5px;color:#475569;margin-left:2px">© Paul Gerits</span></span><span style="flex:1"></span>${status}</div>
 ${regel("Dossier", `<strong>${esc(bron.naam || "zonder naam")}</strong> · ${esc(bron.soort || "")}${periode ? ` · periode ${periode}` : ""}`)}
 ${regel("Bankgegevens", dekkingTekst)}
 ${gaten.length ? `<div style="margin:1px 0;color:#b45309">⚠ ${gaten.length === 1 ? "Mogelijk ontbreekt een periode" : `Mogelijk ontbreken ${gaten.length} periodes`}: ${gaten.map((g) => `${datum(g.van)} – ${datum(g.tot)}`).join(", ")}</div>` : ""}

@@ -1,6 +1,7 @@
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import IncomeReviewStep from "./IncomeReviewStep.jsx";
 import ReviewStep from "./ReviewStep.jsx";
+import JaarFilter, { inJaar, jaarMetOpen } from "./JaarFilter.jsx";
 import { getCategorieProfiel } from "../../classification/categories.js";
 
 // Fase 3 — was twee los-inline stukken in App.jsx (de IncomeReviewStep-stap en de "Overboekingen
@@ -28,6 +29,8 @@ export default function HerkomstVanGeldPanel({
   onSplitsRekening,
   onConfirmPersonAsIs,
   personBulkAction,
+  lijstJaar = null,
+  onLijstJaar = null,
 }) {
   if (pendingIncomeReview.length > 0) {
     return (
@@ -47,14 +50,17 @@ export default function HerkomstVanGeldPanel({
   if (personSummary.length === 0) return null;
 
   const open = showPersonReview === null ? pendingPersonReview.length > 0 : showPersonReview;
+  const allePersonenOpen = pendingPersonReview;
+  const jaar = jaarMetOpen(lijstJaar, personSummary);
+  const zichtbaar = pendingPersonReview.filter(inJaar(jaar));
   return (
     <section ref={personReviewRef} className="rounded-xl border-2 border-fuchsia-200 bg-white overflow-hidden shadow-sm">
       <button onClick={() => onToggleShowPersonReview(!open)} className="w-full px-4 py-3 bg-fuchsia-50 text-fuchsia-900 flex items-center gap-2 text-left">
-        {pendingPersonReview.length === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
-        <span className="text-sm font-semibold">Personen en onbekende tegenpartijen controleren</span>
-        {pendingPersonReview.length > 0 ? (
+        {zichtbaar.length === 0 && <Check className="h-4 w-4 text-emerald-600 shrink-0" />}
+        <span className="text-sm font-semibold">Personen en onbekende tegenpartijen controleren{jaar != null ? ` — ${jaar}` : ""}</span>
+        {zichtbaar.length > 0 ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {pendingPersonReview.length}
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {zichtbaar.length}
           </span>
         ) : (
           <span className="text-xs text-emerald-700">Niets openstaand</span>
@@ -62,18 +68,19 @@ export default function HerkomstVanGeldPanel({
         <span className="flex-1" />
         {open ? <ChevronDown className="h-4 w-4 text-fuchsia-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-fuchsia-400 shrink-0" />}
       </button>
+      {open && <JaarFilter jaar={jaar} onJaar={onLijstJaar} items={personSummary} open={allePersonenOpen} />}
       {open && (
         <ReviewStep
-          items={pendingPersonReview}
-          allItems={personSummary}
-          allDone={pendingPersonReview.length === 0}
+          items={zichtbaar}
+          allItems={personSummary.filter(inJaar(jaar))}
+          allDone={zichtbaar.length === 0}
           search={personSearch}
           onSearch={onPersonSearch}
           onMark={onMarkPersonSource}
           onSplits={onSplitsRekening}
           onConfirm={onConfirmPersonAsIs}
           defaultCategory="Overboekingen aan personen"
-          bulkAction={personBulkAction}
+          bulkAction={typeof personBulkAction === "function" ? personBulkAction(zichtbaar) : personBulkAction}
           confirmButtonClass="border-fuchsia-300 bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100"
           explanation={getCategorieProfiel() ? "Kies per tegenpartij de juiste categorie. De keuze geldt meteen voor alle transacties van diezelfde tegenpartij, in alle jaren." : "Kies per tegenpartij de juiste categorie én of het zakelijk of privé is. De keuze geldt meteen voor alle transacties van diezelfde tegenpartij, in alle jaren."}
         />

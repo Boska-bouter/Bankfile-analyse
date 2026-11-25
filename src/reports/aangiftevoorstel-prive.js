@@ -2,6 +2,7 @@
 // box 1 (inkomen, eigen woning, aftrekposten), box 3, heffingskortingen, ingehouden loonheffing en het
 // verschil (terug of bijbetalen). Zelfde cijfers als het Overzicht (calc/prive, tax/prive).
 import { esc, bedrag, rij, document } from "./prive/opmaak.js";
+import { voorlopigVoorJaar, voorlopigRegels } from "./voorlopigeAanslag.js";
 
 const naamVan = (rol, namen) => (rol === "partner" ? namen?.partner || "Partner" : namen?.ondernemer || "Hoofdpersoon");
 
@@ -27,13 +28,22 @@ function persoonTabel(p, namen, metPartner) {
   return `${metPartner ? `<h3>${esc(naamVan(p.rol, namen))}</h3>` : ""}<table>${regels.join("")}</table>`;
 }
 
-function jaarBlok(jaar, d, namen) {
+function jaarBlok(jaar, d, namen, voorlopig = null) {
   const b = d.belasting;
   const ew = b.eigenWoning;
   const pga = b.aftrekposten;
   const inv = d.invoer;
   const delen = [];
-  delen.push(`<div class="uitkomst ${b.verschil < 0 ? "terug" : "bij"}">${Math.abs(b.verschil) < 1 ? "Ongeveer niets terug of bij te betalen" : `${bedrag(Math.abs(b.verschil))} ${b.verschil < 0 ? "terug te krijgen" : "bij te betalen"}`}${b.metPartner ? " (samen)" : ""}</div>`);
+  // nieuw-V10R0 — Boska 23-11: voorlopige aanslag gaat af van de uitkomst; de kop toont dan wat er na de voorlopige aanslag overblijft.
+  const vr = voorlopigRegels(b.verschil, voorlopig);
+  const uit = vr ? vr.rest : b.verschil;
+  delen.push(`<div class="uitkomst ${uit < 0 ? "terug" : "bij"}">${Math.abs(uit) < 1 ? "Ongeveer niets terug of bij te betalen" : `${bedrag(Math.abs(uit))} ${uit < 0 ? "terug te krijgen" : "bij te betalen"}`}${b.metPartner ? " (samen)" : ""}${vr ? " bij de definitieve aanslag" : ""}</div>${vr?.openRegel ? `<div class="uitkomst ${vr.openRegel.label.includes("ontvangen") ? "terug" : "bij"}" style="font-size:13px">${esc(vr.openRegel.label)}: ${bedrag(vr.openRegel.bedrag)}</div>` : ""}`);
+  if (vr) delen.push(`<h3>Voorlopige aanslag ${jaar}</h3><table>${[
+    rij(b.verschil < 0 ? "Uitkomst berekening: terug te krijgen" : "Uitkomst berekening: bij te betalen", [bedrag(Math.abs(b.verschil))]),
+    ...vr.regels.map((r) => rij(r.label, [`${r.bedrag < 0 ? "− " : "+ "}${bedrag(Math.abs(r.bedrag))}`])),
+    rij(vr.slot.label, [bedrag(vr.slot.bedrag)], "sterk"),
+    vr.openRegel ? rij(vr.openRegel.label, [bedrag(vr.openRegel.bedrag)], "sterkLicht") : "",
+  ].join("")}</table>${vr.noot ? `<p class="noot">${esc(vr.noot)}</p>` : ""}`);
   if (inv.woning) {
     delen.push(`<h3>Eigen woning</h3><table>${[
       rij("WOZ-waarde", [inv.woning.woz ? bedrag(inv.woning.woz) : "onbekend"]),
@@ -70,8 +80,8 @@ function jaarBlok(jaar, d, namen) {
   return `<section class="jaar"><h2>Inkomstenbelasting ${esc(jaar)}</h2>${delen.join("")}</section>`;
 }
 
-export function buildAangiftevoorstelPriveHtml({ jaren, overzicht, namen = null, vandaag = new Date() }) {
-  const blokken = jaren.filter((j) => overzicht?.perJaar?.[j]).map((j) => jaarBlok(j, overzicht.perJaar[j], namen)).join("");
+export function buildAangiftevoorstelPriveHtml({ jaren, overzicht, namen = null, vandaag = new Date(), voorlopigeAanslag = null }) {
+  const blokken = jaren.filter((j) => overzicht?.perJaar?.[j]).map((j) => jaarBlok(j, overzicht.perJaar[j], namen, voorlopigVoorJaar(voorlopigeAanslag, j, { zonderZvw: true }))).join("");
   return document({
     titel: `Indicatie inkomstenbelasting ${jaren.join(", ")}`,
     sub: `${namen?.ondernemer ? `${esc(namen.ondernemer)}${namen?.partner ? ` en ${esc(namen.partner)}` : ""} · ` : ""}privé · opgesteld ${vandaag.toLocaleDateString("nl-NL")}`,

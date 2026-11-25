@@ -6,7 +6,7 @@ import { downloadRapport } from "./download.js";
 // vanuit gegaan en wat staat nog open. Dezelfde cijfers als op het Overzicht (geen nieuwe berekening).
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, profiel, openPunten, meegenomen, zekerheid = null, vandaag = new Date() }) {
+export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, profiel, openPunten, meegenomen, zekerheid = null, voorlopig = null, vandaag = new Date() }) {
   const isBV = rechtsvorm === "bv";
   const bedrag = (n) => (n < 0 ? `${eur(Math.abs(n))} terug` : eur(n));
   // nieuw-V3R1 — altijd expliciet "te betalen" of "te ontvangen" bij een saldo (wens Boska 11-11).
@@ -37,8 +37,16 @@ export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, 
   const hkNootHtml = hkNoten.length
     ? `<p class="noot">De heffingskorting (${hkNoten.map((j) => `${meer ? `${esc(j.jaar)}: ` : ""}${eur(j.hkNoot.totaal)}`).join(", ")}) is hoger dan de berekende IB. Een heffingskorting verlaagt de IB hooguit tot € 0; het restant wordt niet uitbetaald. Op de Zvw-bijdrage telt de heffingskorting niet.</p>`
     : "";
+  // nieuw-V10R1 — Boska 23-11: voorlopige aanslag gaat af van het totaal; daaronder wat bij de definitieve aanslag overblijft.
+  const vaWaarde = (n) => (n == null ? "—" : n < 0 ? `+ ${eur(-n)} (teruggaaf)` : `− ${eur(n)}`);
+  const voorlopigHtml = voorlopig && !isBV
+    ? (voorlopig.ib.some((x) => x != null) ? rij("Af: voorlopige aanslag inkomstenbelasting", voorlopig.ib.map(vaWaarde)) : "")
+      + (voorlopig.zvw.some((x) => x != null) ? rij("Af: voorlopige aanslag Zvw", voorlopig.zvw.map(vaWaarde)) : "")
+      + rij("Bij de definitieve aanslag", voorlopig.rest.map((n) => (n == null ? "—" : saldo(n))), true)
+      + (voorlopig.open.some((x) => x != null) ? rij("Daarnaast nog open op de voorlopige aanslag", voorlopig.open.map((n) => (n == null ? "—" : saldo(n)))) : "")
+    : "";
   const belastingHtml = heeftBelasting
-    ? `<table>${kop}${labels.map((l) => rij(l, jaren.map((j) => { const d = (j.belasting?.delen || []).find((x) => x.label === l); return d ? deelWaarde(d) : "—"; }))).join("")}${rij(totaalLabel, jaren.map((j) => (j.belasting ? saldo(j.belasting.totaal) : "—")), true)}</table>${hkNootHtml}${heeftBtw ? `<h3 class="btw-kop">BTW (per kwartaal aangegeven, niet in het jaarbedrag hierboven)</h3><table>${kop}${rij("BTW-saldo " + (meer ? "" : jaren[0].jaar), jaren.map((j) => (j.belasting && j.belasting.btw != null ? saldo(j.belasting.btw) : "—")))}</table>` : ""}`
+    ? `<table>${kop}${labels.map((l) => rij(l, jaren.map((j) => { const d = (j.belasting?.delen || []).find((x) => x.label === l); return d ? deelWaarde(d) : "—"; }))).join("")}${rij(totaalLabel, jaren.map((j) => (j.belasting ? saldo(j.belasting.totaal) : "—")), true)}${voorlopigHtml}</table>${voorlopig?.noot ? `<p class="noot">${esc(voorlopig.noot)}</p>` : ""}${hkNootHtml}${heeftBtw ? `<h3 class="btw-kop">BTW (per kwartaal aangegeven, niet in het jaarbedrag hierboven)</h3><table>${kop}${rij("BTW-saldo " + (meer ? "" : jaren[0].jaar), jaren.map((j) => (j.belasting && j.belasting.btw != null ? saldo(j.belasting.btw) : "—")))}</table>` : ""}`
     : `<p>Nog niet te berekenen.</p>`;
   const profielHtml = (profiel || []).filter((b) => b.regels?.length && !(meegenomen && b.titel === "Auto, lease en lening")).map((b) =>
     `<div class="blok"><h3>${esc(b.titel)}</h3><ul>${b.regels.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`).join("");
@@ -52,14 +60,14 @@ export function buildKlantSamenvattingHtml({ klantNaam, jaren = [], rechtsvorm, 
   return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8"><title>Samenvatting ${esc(jaarTitel)}${klantNaam ? ` — ${esc(klantNaam)}` : ""}</title>
 <style>
  *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;margin:0;padding:28px 36px;font-size:12px;line-height:1.4}
- h1{font-size:20px;margin:0 0 2px} .sub{color:#64748b;margin-bottom:18px}
+ h1{font-size:20px;margin:0 0 2px} .sub{color:#334155;margin-bottom:18px}
  h2{font-size:13px;border-bottom:2px solid #0f172a;padding-bottom:3px;margin:20px 0 8px}
- h3{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.03em;margin:0 0 3px} h3.btw-kop{margin-top:10px}
+ h3{font-size:10px;color:#334155;text-transform:uppercase;letter-spacing:.03em;margin:0 0 3px} h3.btw-kop{margin-top:10px}
  table{width:100%;border-collapse:collapse} td{padding:5px 6px;border-bottom:1px solid #f1f5f9}
  .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums} tr.sterk td{font-weight:bold;border-top:2px solid #0f172a;border-bottom:none;font-size:13px;padding-top:8px}
  .blokken{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px} .blok ul,ul{margin:0;padding-left:16px} .blok li,li{margin:1px 0}
- .noot{color:#64748b;font-size:10.5px;font-style:italic} .disc{margin-top:22px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#475569;font-size:10.5px}
-th{font-size:9px;text-transform:uppercase;color:#64748b;text-align:left;border-bottom:1px solid #cbd5e1;padding:4px 6px} .klein{color:#64748b;font-size:10px}
+ .noot{color:#334155;font-size:10.5px;font-style:italic} .disc{margin-top:22px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#475569;font-size:10.5px}
+th{font-size:9px;text-transform:uppercase;color:#334155;text-align:left;border-bottom:1px solid #cbd5e1;padding:4px 6px} .klein{color:#334155;font-size:10px}
  .blok{break-inside:avoid;page-break-inside:avoid} @media print{body{padding:0}}
 </style></head><body>
 <h1>Samenvatting ${esc(jaar)}</h1>

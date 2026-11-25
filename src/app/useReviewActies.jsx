@@ -184,27 +184,28 @@ export function useReviewActies(invoer) {
   // V90 — de bulkknoppen werken per TYPE: alleen de tegenpartijen die nu als Zakelijk (resp. Privé) staan.
   const overigZakelijkPending = pendingOverigReview.filter((i) => i.type === "Zakelijk");
   const overigPrivePending = pendingOverigReview.filter((i) => i.type !== "Zakelijk");
-  const bulkMarkOverigAsPriveOpname = () => {
-    for (const item of overigZakelijkPending) markOverigItem(item, "Privé opnames", "Zakelijk");
+  // nieuw-V9R6 — de panelen geven de lijst mee die in beeld is (jaarfilter); zonder lijst: alles.
+  const bulkMarkOverigAsPriveOpname = (lijst = overigZakelijkPending) => {
+    for (const item of lijst) markOverigItem(item, "Privé opnames", "Zakelijk");
   };
-  const bulkMarkOverigAsWinkelsDivers = () => {
-    for (const item of overigPrivePending) markOverigItem(item, "Winkels divers", "Prive");
+  const bulkMarkOverigAsWinkelsDivers = (lijst = overigPrivePending) => {
+    for (const item of lijst) markOverigItem(item, "Winkels divers", "Prive");
   };
   // V90 — "Overboekingen aan personen": alles in één keer bevestigen, of alles naar Overig
-  const personBulkAction = [
+  const personBulkAction = (lijst = pendingPersonReview) => [
     {
-      label: `Alles is aan personen: ja (${pendingPersonReview.length})`,
-      confirmText: `${pendingPersonReview.length} tegenpartij(en) allemaal bevestigen als "Overboeking aan personen"?`,
+      label: `Alles is aan personen: ja (${lijst.length})`,
+      confirmText: `${lijst.length} tegenpartij(en) allemaal bevestigen als "Overboeking aan personen"?`,
       onApply: () => {
         snapshotBeforeAction('"Klopt zo" bevestigd (alles)');
-        const keys = pendingPersonReview.map((i) => i.key);
+        const keys = lijst.map((i) => i.key);
         setReviewedPersonKeys((prev) => [...new Set([...prev, ...keys])]);
       },
     },
     {
-      label: `Alles is aan personen: nee (${pendingPersonReview.length})`,
-      confirmText: `${pendingPersonReview.length} tegenpartij(en) allemaal NIET als overboeking aan personen zien? Ze komen dan bij "Overig" te staan, waar je ze verder kunt indelen.`,
-      onApply: () => { for (const item of pendingPersonReview) markPersonSource(item, "Overig", item.type); },
+      label: `Alles is aan personen: nee (${lijst.length})`,
+      confirmText: `${lijst.length} tegenpartij(en) allemaal NIET als overboeking aan personen zien? Ze komen dan bij "Overig" te staan, waar je ze verder kunt indelen.`,
+      onApply: () => { for (const item of lijst) markPersonSource(item, "Overig", item.type); },
     },
   ];
   const confirmOverigAsIs = (item) => {

@@ -139,6 +139,13 @@ export default function SetupWizardModal({
     // beide-V8R4 — eigen rekeningen (andere, spaar) worden ook in Eenvoudig gevraagd: zonder die vraag telden overboekingen naar
     // een eigen rekening elders als privé opname (vergelijking Eenvoudig ↔ Uitgebreid, wens Boska 27-10).
     if (eenvoudig) for (const k of ["klanten", "leaseOverig", "voorraad", "activa", "aov", "overig"]) n[k] = false;
+    // nieuw-V10R9 — Boska 25-11: "Basisvragen bewerken" in een opgezet dossier toont altijd dezelfde vragen (schermen 31 en 32,
+    // met het huidige antwoord). Voorheen kwamen er wisselend schermen bij voor vragen die toevallig nog openstonden (bijv. een
+    // net verstreken btw-kwartaal); die staan als open punt bij Controleren en het btw-kwartaaloverzicht.
+    if (forceRechtsvormStep && alreadyEstablished && !Array.isArray(alleenVragen)) for (const k of Object.keys(n)) if (!["naam", "branche", "vanPrive", "rechtsvorm", "holding", "andere"].includes(k)) n[k] = false;
+    // nieuw-V10R9 — Boska 25-11: de vragen "spaarrekening gekoppeld?" (zakelijk en privé) vervallen. Een spaarrekening geef je op
+    // met het rekeningnummer bij "Andere eigen rekeningen"; dat geeft meer zekerheid. Eerdere antwoorden blijven gewoon werken.
+    n.spaar = false; n.spaarPrive = false;
     return n;
   });
   // De kwartalenlijst volgt `quartersToAsk` totdat scherm 36 voor het eerst getoond wordt, en wordt
@@ -793,7 +800,7 @@ function Scherm32({ typedNow, zet, needs, goNext, sessionFiles, eigenRekeningenE
       {needs.andere && (
         <Sectie
           titel="Andere eigen rekeningen die niet worden geladen?"
-          uitleg="Met het rekeningnummer herkent de app overboekingen daarheen als eigen geld (privé-opname of interne overboeking). Ook spaarrekeningen die niet worden geladen, zijn hier op te geven."
+          uitleg="Met het rekeningnummer herkent de app overboekingen daarheen als eigen geld (privé-opname of interne overboeking). Geef ook spaarrekeningen die niet worden geladen hier op, met het nummer of de naam zoals die in de omschrijving van de bank staat (bijv. L12345678 of Zakelijke Oranje Spaarrekening). Het nummer is het zekerst."
         >
           {lijst.length > 0 && (
             <ul className="space-y-1">
@@ -809,7 +816,7 @@ function Scherm32({ typedNow, zet, needs, goNext, sessionFiles, eigenRekeningenE
             type="text"
             value={typedNow.eigenRekeningIban ?? ""}
             onChange={(e) => zet({ eigenRekeningIban: e.target.value })}
-            placeholder="Rekeningnummer (IBAN)"
+            placeholder="Rekeningnummer, of de naam zoals in de omschrijving"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
           <div className="flex flex-wrap gap-2">

@@ -99,7 +99,7 @@ export default function ClassificationConfidencePanel({ classified, jaar = null,
         </div>
         {(eldersOverig > 0 || eldersPersonen > 0) && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-            <span>Daarnaast {[eldersOverig > 0 ? `${eldersOverig} in Nog niet ingedeeld` : null, eldersPersonen > 0 ? `${eldersPersonen} in Personen en onbekende tegenpartijen` : null].filter(Boolean).join(", ")}{jaar ? ` (${jaar})` : ""}</span>
+            <span>Daarnaast {[eldersOverig > 0 ? `${eldersOverig} ${eldersOverig === 1 ? "boeking" : "boekingen"} in Nog niet ingedeeld` : null, eldersPersonen > 0 ? `${eldersPersonen} ${eldersPersonen === 1 ? "boeking" : "boekingen"} in Personen en onbekende tegenpartijen` : null].filter(Boolean).join(", ")}{jaar ? ` (${jaar})` : ""}</span>
             <span className="flex-1" />
             {eldersOverig > 0 && onOpenOverig && <button type="button" onClick={(e) => { e.stopPropagation(); onOpenOverig(); }} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold hover:bg-slate-100">Nog niet ingedeeld</button>}
             {eldersPersonen > 0 && onOpenPersonen && <button type="button" onClick={(e) => { e.stopPropagation(); onOpenPersonen(); }} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold hover:bg-slate-100">Personen</button>}

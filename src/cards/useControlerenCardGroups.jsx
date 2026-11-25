@@ -1,12 +1,13 @@
 // Uit App.jsx gehaald (opsplitsing). Zelfde berekening, alle invoer komt binnen via `p`.
 import { eur } from "../utils/amounts.js";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ActivaPanel from "../components/loans/ActivaPanel.jsx";
 import CategoryPercentagePanel from "../components/overview/CategoryPercentagePanel.jsx";
 import ClassificationConfidencePanel from "../components/dashboard/ClassificationConfidencePanel.jsx";
 import { FileSpreadsheet, Users } from "lucide-react";
 import HerkomstVanGeldPanel from "../components/review/HerkomstVanGeldPanel.jsx";
 import AanvullendeControles from "../components/review/AanvullendeControles.jsx";
+import BalansCheck from "../components/review/BalansCheck.jsx";
 import ImportControlPanel from "../components/upload/ImportControlPanel.jsx";
 import LeaseInterestPanel from "../components/loans/LeaseInterestPanel.jsx";
 import LoanInterestPanel from "../components/loans/LoanInterestPanel.jsx";
@@ -45,13 +46,18 @@ export function useControlerenCardGroups(p) {
     showDuplicateDetails, showOverigReview, showPersonReview, startersaftrekStatus, tariefOverrides, setTariefOverridesState, overigInkomenBox1, setOverigInkomenBox1State, years, transactionNotes,
     transactions, undoMergeLease, unmarkActivaUnknown, unmarkLeaseUnknown, unmarkLoanUnknown,
     withExpand, yearlySummary, zaLegacyJaDefault, zakGroupForYear, zakelijkRekeningGeladen,
-    zelfstandigenaftrekStatus, rechtsvorm,
+    zelfstandigenaftrekStatus, rechtsvorm, balansCheck, balansCheckRef,
   } = p;
+  // nieuw-V9R6 — jaar van de lijsten Nog niet ingedeeld / Personen (null = alle jaren)
+  const [lijstJaar, setLijstJaar] = useState(null);
 
   return useMemo(() => {
     if (transactions.length === 0) return [];
+    // nieuw-V9R6 — via de kaarten zelf: lijst van alle jaren (het jaarfilter hoort bij Classificatiezekerheid).
+    const metAlleJaren = (c) => (c?.onClick ? { ...c, onClick: () => { setLijstJaar(null); c.onClick(); } } : c);
+    const kaarten = controlerenCardsByKey && { ...controlerenCardsByKey, overigReview: metAlleJaren(controlerenCardsByKey.overigReview), personReview: metAlleJaren(controlerenCardsByKey.personReview) };
     const g = (key, title, icon, memberKeys, extra) => {
-      const built = groupCards(controlerenCardsByKey, memberKeys, extra);
+      const built = groupCards(kaarten, memberKeys, extra);
       if (!built) return null;
       return { key, title, icon, tone: built.tone, lines: built.lines, onClick: built.onClick, hint: built.hint, actionLabel: "Bekijken" };
     };
@@ -61,7 +67,7 @@ export function useControlerenCardGroups(p) {
     return [
       withExpand(
         (() => {
-          let basis = g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence"]);
+          let basis = g("importKwaliteit", "Import & kwaliteit", <FileSpreadsheet className="h-3.5 w-3.5" />, ["importControle", "confidence", "balanscheck"]);
           const nCtl = aanvullendeControles ? (aanvullendeControles.dekking.aantalVerdacht > 0 ? 1 : 0) + aanvullendeControles.terugkerend.length + (aanvullendeControles.kostenIn?.length || 0) : 0;
           if (basis && nCtl > 0) basis = { ...basis, lines: [...basis.lines, { label: "Aanvullende controles", value: `🟠 ${nCtl} om te bekijken` }] };
           if (!basis || !aansluitControleInfo.heeftData) return basis;
@@ -110,14 +116,15 @@ export function useControlerenCardGroups(p) {
             <ImportControlPanel diagnostics={importDiagnostics} onReviewFile={setReviewFileModal} continuity={fileContinuity} overlap={overlapKoppeling} onRemoveFile={removeFile} accountTypeByFile={accountTypeByFile} bevestigd={bevestigdeControles || {}} onBevestig={bevestigControle} onHerroep={herroepControle} />
           </div>
           <AanvullendeControles data={aanvullendeControles} onBevestig={bevestigControle} onBevestigAlles={bevestigControles} onToepassenTerugkerend={toepassenTerugkerend} onToepassenTerugkerendAlle={toepassenTerugkerendAlle} onVerplaatsBijschrijvingen={verplaatsBijschrijvingen} onFactuurjaar={zetFactuurjaar} onFactuurjaarBoeking={zetFactuurjaarBoeking} onKostenVorigJaar={zetKostenVorigJaar} />
+          {activeYear && balansCheck && <div ref={balansCheckRef}><BalansCheck jaar={activeYear} {...balansCheck} /></div>}
           <div ref={confidenceSectionRef}>
             <ClassificationConfidencePanel
               classified={activeYear ? classified.filter((t) => t.year === activeYear) : classified}
               jaar={activeYear}
               andereJaren={activeYear ? confidenceOpenJaren.filter((y) => Number(y) !== Number(activeYear)) : []}
               onKiesJaar={setActiveYear}
-              onOpenOverig={controlerenCardsByKey?.overigReview?.onClick}
-              onOpenPersonen={controlerenCardsByKey?.personReview?.onClick}
+              onOpenOverig={controlerenCardsByKey?.overigReview?.onClick && (() => { setLijstJaar(activeYear || null); controlerenCardsByKey.overigReview.onClick(); })}
+              onOpenPersonen={controlerenCardsByKey?.personReview?.onClick && (() => { setLijstJaar(activeYear || null); controlerenCardsByKey.personReview.onClick(); })}
               onOpenHelp={setHelpPopupChapter}
               onConfirmCorrect={confirmClassificationCorrect}
               onOpenLevel={setOpenConfidenceLevel}
@@ -150,6 +157,8 @@ export function useControlerenCardGroups(p) {
           onSplitsRekening={splitsRekening}
           onConfirmPersonAsIs={confirmPersonAsIs}
           personBulkAction={personBulkAction}
+          lijstJaar={lijstJaar}
+          onLijstJaar={setLijstJaar}
         />
 <OpschonenPanel
           overigReviewRef={overigReviewSectionRef}
@@ -167,6 +176,8 @@ export function useControlerenCardGroups(p) {
           overigZakelijkCount={overigZakelijkPending.length}
           overigPriveCount={overigPrivePending.length}
           classified={classified}
+          lijstJaar={lijstJaar}
+          onLijstJaar={setLijstJaar}
           duplicatesRef={duplicatesSectionRef}
           duplicateGroups={duplicateGroups}
           confirmedSeparateGroups={confirmedSeparateGroups}
@@ -341,7 +352,7 @@ export function useControlerenCardGroups(p) {
         </div>
       ),
     ].filter(Boolean);
-  }, [
+  }, [lijstJaar, balansCheck,
     transactions.length,
     controlerenCardsByKey,
     instellingenCardsByKey,

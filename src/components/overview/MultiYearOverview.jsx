@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { eurTight } from "../../utils/amounts.js";
 import { estimateIncomeTax, estimateZvw } from "../../tax/incomeTax.js";
+import { voorlopigPerJaar } from "../../reports/voorlopigeAanslag.js";
 import HelpHint from "../shared/HelpHint.jsx";
 import KwartaalUitgavenModal from "../btw/KwartaalUitgavenModal.jsx";
 import { metBolletjes } from "../shared/StatusDot.jsx";
@@ -15,7 +16,7 @@ import { metBolletjes } from "../shared/StatusDot.jsx";
 export default function MultiYearOverview({
   years, yearlySummaries, yearlyOpenOB, korRegeling, onYearClick, ibStatus, setIbGedaan,
   zvwStatus, setZvwGedaan, volledigeJaren, businessAdvies, activeYear, onOpenHelp, costBreakdownByYear,
-  kostenTotaalByYear, yearlyProgress,
+  kostenTotaalByYear, yearlyProgress, voorlopigeAanslag = null, indicatieTotaal = null,
 }) {
   // v273 — dit paneel toont nu alleen nog in de Meerjarenoverzicht-pop-up (het permanente inline
   // blok is in v270 verwijderd); de gebruiker hoeft de inhoud dan niet nog eens apart open te
@@ -39,6 +40,18 @@ export default function MultiYearOverview({
     const dot = p.status === "rood" ? "🔴" : p.status === "groen" ? "🟢" : "🟠";
     const title = parts.length ? `Dossiercontrole: ${parts.join(", ")}` : "Dossiercontrole compleet, geen onzekerheden";
     return { dot, title };
+  };
+
+  // nieuw-V10R1 — Boska 23-11: voorlopige aanslag (IB + Zvw) en wat er bij de definitieve aanslag overblijft
+  // volgens de indicatieve aangifteberekening (met ondernemersaftrek en heffingskorting, niet de basisindicatie).
+  const va = voorlopigPerJaar(years, (y) => (indicatieTotaal ? indicatieTotaal(y) : null), voorlopigeAanslag);
+  const vaVan = (year) => {
+    if (!va) return null;
+    const i = years.indexOf(year);
+    const som = (va.ib[i] || 0) + (va.zvw[i] || 0);
+    const heeft = va.ib[i] != null || va.zvw[i] != null;
+    const b = va.betaald[i];
+    return { heeft, som, rest: va.rest[i], open: va.open[i], status: !heeft ? "" : va.open[i] != null ? `${eurTight(Math.abs(va.open[i]))} nog ${va.open[i] > 0 ? "te betalen" : "te ontvangen"}` : b.some((x) => x == null) ? "status onbekend" : som < 0 ? "ontvangen" : "betaald" };
   };
 
   const effectiefFor = (year) => {
@@ -115,6 +128,8 @@ export default function MultiYearOverview({
                   Basisindicatie Zvw*
                 </th>
                 <th className="text-right font-medium py-2 px-3" title="Wat daadwerkelijk vanaf de zakelijke rekening is afgedragen aan IB/IH en Zvw dit jaar">Al betaald ZVW/IH</th>
+                {va && <th className="text-right font-medium py-2 px-3" title="Ingevuld bij de indicatieve aangifteberekening: IB/PVV + Zvw.">Voorlopige aanslag</th>}
+                {va && <th className="text-right font-medium py-2 px-3" title="Totaal IB + Zvw volgens de indicatieve aangifteberekening (met aftrekposten en heffingskorting) min de voorlopige aanslag">Bij de definitieve aanslag</th>}
                 <th className="text-left font-medium py-2 px-3" title="Alleen een statusherinnering — heeft geen invloed op het getoonde bedrag">Status IB/IH</th>
                 <th className="text-left font-medium py-2 px-3" title="Alleen een statusherinnering — heeft geen invloed op het getoonde bedrag">Status Zvw</th>
                 <th className="text-right font-medium py-2 pl-3">Tekort / Over</th>
@@ -168,6 +183,14 @@ export default function MultiYearOverview({
                       </span>
                     </td>
                     <td className="py-2 px-3 text-right font-mono text-slate-500 whitespace-nowrap">{eurTight(summary.alBetaaldeZvwIh)}</td>
+                    {va && (() => { const v = vaVan(year); return (<>
+                      <td className="py-2 px-3 text-right whitespace-nowrap">
+                        {v.heeft ? (<><span className="font-mono text-slate-600">{eurTight(Math.abs(v.som))}{v.som < 0 ? " terug" : ""}</span><span className={`block text-xs ${v.open != null ? "text-amber-700" : "text-slate-500"}`}>{v.status}</span></>) : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="py-2 px-3 text-right whitespace-nowrap">
+                        {v.rest == null ? <span className="text-slate-300">—</span> : (<><span className={`font-mono font-medium ${v.rest > 0.5 ? "text-rose-700" : "text-emerald-700"}`}>{Math.abs(v.rest) < 0.5 ? eurTight(0) : `${eurTight(Math.abs(v.rest))} ${v.rest > 0 ? "te betalen" : "terug"}`}</span></>)}
+                      </td>
+                    </>); })()}
                     <td className="py-2 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <label className="inline-flex items-center gap-1.5 text-xs text-slate-600" title="Alleen een statusherinnering voor jezelf/de cliënt — verandert het getoonde bedrag niet">
                         <input type="checkbox" checked={ibGedaan} onChange={(e) => setIbGedaan(year, e.target.checked)} />

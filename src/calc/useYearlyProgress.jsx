@@ -15,7 +15,7 @@ export function useYearlyProgress(p) {
     heeftLeaseAutoDossierBreed, huurZakelijkPercentageStatus, ibStatus, incompleteActivaCount, incompleteLeasesCount,
     incompleteLoansCount, korRegeling, kwartaalStatus, periodeQuarterOverrides, priveRekeningGeladen,
     rechtsvorm, reviewedOverigKeys, reviewedPersonKeys, voorbelastingExcluded, vpbStatus,
-    years, zelfstandigenaftrekStatus, zvwStatus, priveOverzicht = null,
+    years, zelfstandigenaftrekStatus, zvwStatus, priveOverzicht = null, balansOpen = null,
   } = p;
 
   return useMemo(() => {
@@ -63,6 +63,8 @@ export function useYearlyProgress(p) {
       if (zakelijkJaar && korRegeling === false) {
         checks.push({ frac: btwVerlegd !== null ? 1 : 0 });
       }
+      // nieuw-V9R9 — Boska 23-11: Balanscheck-punten die nog niet zijn afgevinkt ("Gezien, klopt") zijn open punten.
+      for (let i = 0; i < (balansOpen?.[year] || 0); i++) checks.push({ frac: 0 });
       // avgFrac/pct/openPunten hieronder zijn zuiver DOSSIERCONTROLE (administratief) — of de
       // aangiften al daadwerkelijk gedaan/betaald zijn, telt hier bewust niet meer mee (zie
       // werkelijkAangifteChecks verderop).
@@ -168,5 +170,5 @@ export function useYearlyProgress(p) {
       };
     }
     return map;
-  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, vpbStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen, incompleteLoansCount, incompleteLeasesCount, incompleteActivaCount, rechtsvorm, zelfstandigenaftrekStatus, priveOverzicht]);
+  }, [years, groups, classified, effectiveCategoryBtwRates, btwVerlegd, voorbelastingExcluded, periodeQuarterOverrides, kwartaalStatus, korRegeling, reviewedPersonKeys, reviewedOverigKeys, fileContinuity, ibStatus, zvwStatus, vpbStatus, huurZakelijkPercentageStatus, energieZakelijkPercentageStatus, gemeentelijkeKostenZakelijkPercentageStatus, categoryZakelijkPercentageEff, autoStatus, heeftLeaseAutoDossierBreed, priveRekeningGeladen, incompleteLoansCount, incompleteLeasesCount, incompleteActivaCount, rechtsvorm, zelfstandigenaftrekStatus, priveOverzicht, balansOpen]);
 }

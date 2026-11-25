@@ -54,11 +54,11 @@ export function buildBtwOverzichtHtml({ klantNaam, jaren, kwartaalStatus, vandaa
 <style>
 @page{size:A4 landscape;margin:12mm}
 *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;margin:0;padding:28px 36px;font-size:11px;line-height:1.35}
-h1{font-size:20px;margin:0 0 2px} .sub{color:#64748b;margin-bottom:10px} h2.jaar{font-size:16px;border-bottom:2px solid #0f172a;padding-bottom:3px;margin:24px 0 8px;break-after:avoid}
+h1{font-size:20px;margin:0 0 2px} .sub{color:#334155;margin-bottom:10px} h2.jaar{font-size:16px;border-bottom:2px solid #0f172a;padding-bottom:3px;margin:24px 0 8px;break-after:avoid}
 table{width:100%;border-collapse:collapse;margin-bottom:8px} th{background:#f1f5f9;text-align:left;padding:4px 6px;font-size:10px;vertical-align:bottom}
 td{padding:4px 6px;border-bottom:1px solid #e2e8f0;vertical-align:top} .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.klein{color:#94a3b8;font-size:9px} .sterk{font-weight:bold} .st{font-size:10px;color:#64748b} tr.tot td{font-weight:bold;border-top:2px solid #94a3b8;border-bottom:none}
-.auto{background:#fffbeb;border:1px solid #fcd34d;color:#78350f;border-radius:6px;padding:6px 8px;font-size:10px;margin:6px 0} .noot{color:#64748b;font-size:10px;margin:8px 0} tr{break-inside:avoid} @media print{body{padding:0}}
+.klein{color:#475569;font-size:9px} .sterk{font-weight:bold} .st{font-size:10px;color:#334155} tr.tot td{font-weight:bold;border-top:2px solid #94a3b8;border-bottom:none}
+.auto{background:#fffbeb;border:1px solid #fcd34d;color:#78350f;border-radius:6px;padding:6px 8px;font-size:10px;margin:6px 0} .noot{color:#334155;font-size:10px;margin:8px 0} tr{break-inside:avoid} @media print{body{padding:0}}
 </style></head><body>
 <h1>BTW-aangifte per kwartaal ${esc(titel)}</h1>
 <div class="sub">${klantNaam ? `${esc(klantNaam)} · ` : ""}opgesteld ${vandaag.toLocaleDateString("nl-NL")}</div>

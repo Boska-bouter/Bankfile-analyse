@@ -1,3 +1,4 @@
+import { metEigenRekeningUitOmschrijving } from "../classification/eigenRekeningInOmschrijving.js";
 import { useEffect, useMemo } from "react";
 import { buildTransactions, computeImportDiagnostics, computeFileContinuity, computeOwnAccountByFile, aansluitingControleSleutel } from "../importers/transactions.js";
 import { computeDuplicateInfo } from "../importers/duplicates.js";
@@ -67,10 +68,11 @@ export function useTransacties(p) {
     [txZonderOverlap]
   );
   const transactions = useMemo(() => {
-    if (excludedDuplicateFingerprints.length === 0 && excludedManualFingerprints.length === 0) return txZonderOverlap;
+    // nieuw-V10R9 — opgegeven eigen rekening die alleen in de omschrijving staat (zie eigenRekeningInOmschrijving.js).
+    if (excludedDuplicateFingerprints.length === 0 && excludedManualFingerprints.length === 0) return metEigenRekeningUitOmschrijving(txZonderOverlap, eigenRekeningenExtra, accountTypeByFile);
     const excludedSet = new Set([...excludedDuplicateFingerprints, ...excludedManualFingerprints]);
-    return txZonderOverlap.filter((tx) => !excludedSet.has(fingerprintByTxId[tx.id]));
-  }, [txZonderOverlap, excludedDuplicateFingerprints, excludedManualFingerprints, fingerprintByTxId]);
+    return metEigenRekeningUitOmschrijving(txZonderOverlap.filter((tx) => !excludedSet.has(fingerprintByTxId[tx.id])), eigenRekeningenExtra, accountTypeByFile);
+  }, [txZonderOverlap, excludedDuplicateFingerprints, excludedManualFingerprints, fingerprintByTxId, eigenRekeningenExtra, accountTypeByFile]);
 
   return { fingerprintByTxId, duplicateFingerprints, duplicateGroups, allTransactions, ownAccountsElsewhereByFile, transactions, ownAccountByFile, eigenRekeningenGeladen, importDiagnostics, fileContinuity, overlapKoppeling, confirmedSeparateGroups };
 }

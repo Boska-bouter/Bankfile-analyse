@@ -69,7 +69,21 @@ export function useDossierDialogen({
     if (parsedFilesCount === 0 && !heeftAntwoorden) { setActiveTab("overzicht"); setManualWizardOpen(true); return; }
     if (parsedFilesCount === 0) { doClearAllData(true); return; }
     // Niets gewijzigd sinds de laatste opslag/het laden: geen vraag nodig (het dossier is al in een bestand te vinden).
-    if (changesSinceExport === 0) { doClearAllData(true); return; }
+    // nieuw-V9R2 — Boska 19-11: per ongeluk op "Nieuw dossier" tikken (iPad) sloot het opgeslagen dossier zonder vraag.
+    // Nu altijd eerst bevestigen; opslaan is dan niet nodig.
+    if (changesSinceExport === 0) {
+      setDialog({
+        title: "Nieuw dossier starten?",
+        message: (
+          <>
+            <p>Het huidige dossier ({naamRegel()}) wordt gesloten.</p>
+            <p>Er zijn geen wijzigingen sinds het laatst is opgeslagen of geladen.</p>
+          </>
+        ),
+        actions: [{ label: "Nieuw dossier starten", variant: "primary", onClick: () => doClearAllData(true) }],
+      });
+      return;
+    }
     const nieuw = () => doClearAllData(true);
     setDialog({
       title: "Nieuw dossier starten? Het huidige dossier wordt nu gesloten",
