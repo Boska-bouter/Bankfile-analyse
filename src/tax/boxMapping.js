@@ -104,6 +104,26 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   const rubriekNetto = (naam, cats, toelichting) => ({
     naam, categorieen: cats, totaal: sumCatNetto(cats), toelichting, perCategorie: perCategorieVanNetto(cats),
   });
+  // nieuw-V10R6 — kostenrubriek getekend: een teruggave (bijv. schade-uitkering op "Verzekering: Zakelijk") verlaagt de
+  // kosten; per saldo een teruggave = negatief bedrag. Eerder abs(): de rubriek stond dan als kosten in het overzicht en
+  // "Overige correcties" corrigeerde het dubbele bedrag (Dakhlaoui 2021: Andere kosten € 2.855, correctie € 5.710).
+  // nieuw-V10R6 — Boska 24-11: een terugbetaling (schade-uitkering, teruggave energie/water) wordt niet verrekend met de
+  // betaalde premie of kosten: per categorie twee regels, betaald en ontvangen. Het rubriektotaal (per saldo) blijft gelijk.
+  const ONTVANGEN_NAAM = { "Verzekering: Zakelijk": "Schade-uitkering verzekering (ontvangen)", "Verzekeringen": "Schade-uitkering verzekering (ontvangen)" };
+  const kostRegels = (naam, cats) => {
+    const items = zakItems.filter((tx) => cats.includes(tx.category));
+    const betaald = -items.filter((tx) => tx.amount < 0).reduce((a, tx) => a + nettoOf(tx), 0);
+    const ontvangen = -items.filter((tx) => tx.amount > 0).reduce((a, tx) => a + nettoOf(tx), 0);
+    const ontvNaam = cats.length === 1 && cats[0] === "Schade-uitkering verzekering" ? "Schade-uitkering verzekering" : ONTVANGEN_NAAM[cats[0]] || `${naam} (ontvangen)`;
+    return [
+      { categorie: naam === "Schade-uitkering verzekering" ? `${naam} (betaald)` : naam, totaal: Math.abs(betaald), getekend: betaald, bronCats: cats },
+      { categorie: ontvNaam, totaal: Math.abs(ontvangen), getekend: ontvangen, bronCats: cats },
+    ].filter((r) => r.totaal >= 0.005);
+  };
+  const rubriekKosten = (naam, cats, toelichting) => ({
+    naam, categorieen: cats, totaal: sumKostenNettoGetekend(cats), toelichting,
+    perCategorie: cats.flatMap((c) => kostRegels(c, [c])),
+  });
 
   // Kilometervergoeding voor een privéauto die zakelijk wordt gebruikt (autoStatus "prive",
   // zie tax/kmVergoeding.js) — komt NIET uit een categorie/banktransactie (het is een notionele
@@ -132,15 +152,15 @@ export function computeIbBoxMapping(zakItems, loanRenteForYear, leaseRenteForYea
   }));
 
   const overigeBedrijfskosten = [
-    rubriekNetto("Overig vervoer", RUBRIEK_OVERIG_VERVOER),
+    rubriekKosten("Overig vervoer", RUBRIEK_OVERIG_VERVOER),
     // beide-V10R1: huur/energie/gemeentelijk en hun privé-variant als één regel per kostensoort (wens Boska 28-10).
-    { ...rubriekNetto("Huisvestingskosten", RUBRIEK_HUISVESTING), perCategorie: HUISVESTING_SOORTEN
-      .map(([naam, cats]) => ({ categorie: naam, totaal: sumCatNetto(cats), bronCats: cats })).filter((r) => r.totaal > 0) },
+    { ...rubriekKosten("Huisvestingskosten", RUBRIEK_HUISVESTING), perCategorie: HUISVESTING_SOORTEN
+      .flatMap(([naam, cats]) => kostRegels(naam, cats)) },
     ...gedeeldeRegels,
-    rubriekNetto("Verkoopkosten", RUBRIEK_VERKOOP),
-    rubriekNetto("Andere kosten", RUBRIEK_ANDERE_KOSTEN),
+    rubriekKosten("Verkoopkosten", RUBRIEK_VERKOOP),
+    rubriekKosten("Andere kosten", RUBRIEK_ANDERE_KOSTEN),
     ...(kmVergoedingRubriek ? [kmVergoedingRubriek] : []),
-  ].filter((r) => r.totaal > 0);
+  ].filter((r) => Math.abs(r.totaal) >= 0.005);
 
   // De 5 autokosten-categorieën (MRB, verzekering, brandstof, parkeren, onderhoud) horen bij de
   // samengevoegde "Auto's en machines"-post (zie aangiftevoorstel.js), niet bij "Overige

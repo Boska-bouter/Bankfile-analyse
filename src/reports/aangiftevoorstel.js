@@ -150,8 +150,8 @@ function categorieDetailHtml(perCategorie) {
   return perCategorie.map((r) => {
     const bron = bronTabelHtml(r.bronCats || r.categorie);
     return bron
-      ? `<details class="bron"><summary class="categorie-detail"><span>${esc(r.categorie)} <span class="bron-knop" title="Waar komt dit bedrag vandaan?">ⓘ bron</span></span><span class="num">${eur(r.totaal)}</span></summary>${bron}</details>`
-      : `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`;
+      ? `<details class="bron"><summary class="categorie-detail"><span>${esc(r.categorie)} <span class="bron-knop" title="Waar komt dit bedrag vandaan?">ⓘ bron</span></span><span class="num">${eur(r.getekend != null ? r.getekend : r.totaal)}</span></summary>${bron}</details>`
+      : `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.getekend != null ? r.getekend : r.totaal)}</span></div>`;
   }).join("");
 }
 
@@ -624,6 +624,31 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
   const voorlopigNoot = (v) => { const r = voorlopigRegels(0, v); return r?.noot ? `<p class="ak-noot">${r.noot}</p>` : ""; };
   const af = (n) => (Math.round(n) === 0 ? eh(0) : `− ${eh(n)}`);
   const rij = (label, bedrag, cls = "") => `<div class="ak-r${cls ? " " + cls : ""}"><span>${label}</span><span class="num">${bedrag}</span></div>`;
+  // nieuw-V10R6 — Boska 24-11: onder een kostenregel kort wat erin zit (categorieën met bedrag, grootste eerst).
+  const watErinZit = (perCategorie, totaal = null) => {
+    // getekend: kosten positief, een teruggave (bijv. schade-uitkering) negatief, zodat de regels optellen tot het totaal.
+    const bedrag = (c) => (c.getekend != null ? c.getekend : c.totaal || 0);
+    // betaald en terugbetaald van dezelfde categorie naast elkaar; groepen op grootte (grootste eerst).
+    const groep = (c) => String(c.bronCats || c.categorie);
+    const grootte = {};
+    for (const c of perCategorie || []) grootte[groep(c)] = Math.max(grootte[groep(c)] || 0, Math.abs(bedrag(c)));
+    const lijst = (perCategorie || []).filter((c) => Math.abs(bedrag(c)) >= 0.5)
+      .sort((a, b) => grootte[groep(b)] - grootte[groep(a)] || (groep(a) === groep(b) ? bedrag(b) - bedrag(a) : 0));
+    if (!lijst.length) return "";
+    const naam = (c) => (/^Privé - /.test(c.categorie) ? `${c.categorie.replace(/^Privé - /, "").replace(/^./, (x) => x.toUpperCase())} (zakelijk deel, privé betaald)` : c.categorie);
+    // UX-agent V10R6: één regel die gelijk is aan de kop voegt niets toe.
+    if (lijst.length === 1 && totaal != null && Math.abs(bedrag(lijst[0]) - totaal) < 0.5) return "";
+    const posten = lijst.slice(0, 6).map((c) => ({ label: naam(c), n: bedrag(c) }));
+    if (lijst.length > 6) posten.push({ label: "Overige", n: lijst.slice(6).reduce((a, c) => a + bedrag(c), 0) });
+    // Afgerond zodat de som gelijk is aan het afgeronde totaal (verschil bij de grootste post).
+    const r = posten.map((p) => Math.round(p.n));
+    const doel = Math.round(totaal != null ? totaal : posten.reduce((a, p) => a + p.n, 0));
+    const verschil = doel - r.reduce((a, x) => a + x, 0);
+    if (verschil && Math.abs(verschil) <= posten.length) { let g = 0; r.forEach((x, i) => { if (Math.abs(x) > Math.abs(r[g])) g = i; }); r[g] += verschil; }
+    const fmt = (n) => `${n < 0 ? "− " : ""}${eh(Math.abs(n))}`;
+    const toon = posten.map((p, i) => `<span class="ak-wat-i">${esc(p.label)} ${fmt(r[i])}</span>`);
+    return `<div class="ak-wat">Hierin: ${toon.join(" · ")}</div>`;
+  };
   const scherm = (naam) => `<div class="ak-scherm">${naam}</div>`; // nieuw-V8R4 — zonder "Scherm:" (Boska 18-11)
   const inkoopGroep = (ib.inkoopkosten.totaal || 0) + andereExterneKostenBedrag;
   const machineAfschr = apparatuurAfschrijving + leaseAfschrijvingMachine;
@@ -647,9 +672,10 @@ function buildYearSection(year, classified, categoryBtwRates, btwVerlegd, voorbe
     ${rij("Opbrengsten (omzet zonder btw)", eh(ib.opbrengsten.totaal || 0))}
     ${autoOnttrekking > 0 ? rij(`Overige opbrengsten: bijtelling privégebruik auto (niet hoger dan de autokosten)`, eh(autoOnttrekking)) : ""}
     ${rij("Inkoopkosten, uitbesteed werk en andere externe kosten", eh(inkoopGroep))}
+    ${andereExterneKostenBedrag >= 0.5 ? "" : watErinZit(ib.inkoopkosten.perCategorie, inkoopGroep)}
     ${machineAfschr >= 0.5 ? rij("Afschrijvingen (apparatuur en machines)", eh(machineAfschr)) : ""}
-    ${rij("Overige bedrijfskosten", eh(overigeGroep))}
-    ${overigeRubrieken.map((r) => rij(esc(r.naam), eh(r.totaal), "sub")).join("")}
+    ${rij("Overige bedrijfskosten", `${overigeGroep < 0 ? "− " : ""}${eh(overigeGroep)}`)}
+    ${overigeRubrieken.map((r) => rij(esc(r.naam), `${r.totaal < 0 ? "− " : ""}${eh(Math.abs(r.totaal))}`, "sub") + watErinZit(r.perCategorie, r.totaal)).join("")}
     ${heeftAuto || leaseRente >= 0.5 ? rij(`Auto- en transportkosten${autoOnttrekking > 0 ? " (totale autokosten)" : ""}`, eh(autoTotaal), "sub") : ""}
     ${leaseRente >= 0.5 ? rij("waarvan rente financial lease", eh(leaseRente), "sub sub2") : ""}
     ${(ib.leaseAutoKosten?.btwPrivegebruikKosten || 0) >= 0.5 ? rij("waarvan btw-correctie privégebruik auto", eh(ib.leaseAutoKosten.btwPrivegebruikKosten), "sub sub2") : ""}
@@ -1212,7 +1238,7 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
       ? `<tr><td><strong>${j.year}</strong></td><td class="num">${eur(j.winst)}</td><td class="num" colspan="3">urencriterium onbekend — zie de twee scenario's in dat jaar</td>${heeftBtw ? `<td class="num btw">${btwTekst(j.btw)}</td>` : ""}</tr>`
       : `<tr><td><strong>${j.year}</strong></td><td class="num">${eur(j.winst)}</td><td class="num">${eur(j.ib)}</td><td class="num">${eur(j.zvw)}</td><td class="num"><strong>${eur(j.totaal)}</strong></td>${heeftBtw ? `<td class="num btw">${btwTekst(j.btw)}</td>` : ""}</tr>`).join("")}
     <tr class="totaal"><td>Totaal${onbekendeJaren.length ? ` (zonder ${onbekendeJaren.join(", ")})` : ""}</td><td class="num">${eur(somVan("winst"))}</td><td class="num">${eur(somVan("ib"))}</td><td class="num">${eur(somVan("zvw"))}</td><td class="num">${eur(grandTotaal)}</td>${heeftBtw ? `<td class="num btw">${btwTekst(bepaald.reduce((a, j) => a + (j.btw || 0), 0))}</td>` : ""}</tr>
-  </tbody></table><p class="kerncijfers-voetnoot">Indicatief, op basis van de bankgegevens. Zonder verrekening van voorschotten, voorlopige aanslagen of wat al is betaald.${heeftBtw ? " De BTW wordt per kwartaal aangegeven en staat daarom apart, niet in het totaal IB + Zvw." : ""} Per jaar volgt hieronder de volledige berekening.</p></div>`
+  </tbody></table><p class="kerncijfers-voetnoot">Indicatief, op basis van de bankgegevens. De IB is berekend na aftrek van de ondernemersaftrek (zoals de zelfstandigenaftrek) en de MKB-winstvrijstelling, voor zover die van toepassing zijn. Zonder verrekening van voorschotten, voorlopige aanslagen of wat al is betaald.${heeftBtw ? " De BTW wordt per kwartaal aangegeven en staat daarom apart, niet in het totaal IB + Zvw." : ""} Per jaar volgt hieronder de volledige berekening.</p></div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -1271,6 +1297,8 @@ export function buildAangiftevoorstelHtml(yearsToInclude, classified, categoryBt
   .ak-r { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; font-size: 12px; border-bottom: 1px dotted #e2e8f0; break-inside: avoid; }
   .ak-r.sub { padding-left: 14px; color: #64748b; font-size: 11px; }
   .ak-r.sub.sub2 { padding-left: 28px; font-style: italic; }
+  .ak-wat { padding: 0 0 4px 28px; color: #7b8698; font-size: 10px; line-height: 1.45; border-bottom: 1px dotted #e2e8f0; }
+  .ak-wat-i { white-space: nowrap; }
   .ak-r.tot, .ak-tabel tr.tot td { font-weight: 700; border-bottom: 1px solid #0f172a; }
   .ak-r.groot, .ak-tabel tr.groot td { font-size: 15px; font-weight: 800; border-bottom: 0; padding-top: 8px; }
   .ak-tabel { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; } .ak-tabel td, .ak-tabel th { padding: 3px 4px; border-bottom: 1px dotted #e2e8f0; text-align: left; } .ak-tabel .num { text-align: right; }

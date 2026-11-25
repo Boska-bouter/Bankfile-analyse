@@ -79,7 +79,7 @@ export const HELP_CHAPTERS = [
   {
     key: "gebruiksvoorwaarden",
     groep: "beginnen",
-    titel: "Gebruiksvoorwaarden en copyright",
+    titel: "Gebruiksvoorwaarden, privacyverklaring en copyright",
     inhoud: (
       <div className="space-y-2.5">
         <p>Dit zijn de voorwaarden waarmee je bij het eerste gebruik akkoord bent gegaan. Het scherm komt opnieuw als de tekst inhoudelijk wijzigt.</p>

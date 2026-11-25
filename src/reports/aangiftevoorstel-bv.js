@@ -94,8 +94,8 @@ function categorieDetailHtml(perCategorie) {
   return perCategorie.map((r) => {
     const bron = bronTabelHtml(r.bronCats || r.categorie);
     return bron
-      ? `<details class="bron"><summary class="categorie-detail"><span>${esc(r.categorie)} <span class="bron-knop" title="Waar komt dit bedrag vandaan?">ⓘ bron</span></span><span class="num">${eur(r.totaal)}</span></summary>${bron}</details>`
-      : `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.totaal)}</span></div>`;
+      ? `<details class="bron"><summary class="categorie-detail"><span>${esc(r.categorie)} <span class="bron-knop" title="Waar komt dit bedrag vandaan?">ⓘ bron</span></span><span class="num">${eur(r.getekend != null ? r.getekend : r.totaal)}</span></summary>${bron}</details>`
+      : `<div class="categorie-detail"><span>${esc(r.categorie)}</span><span class="num">${eur(r.getekend != null ? r.getekend : r.totaal)}</span></div>`;
   }).join("");
 }
 
